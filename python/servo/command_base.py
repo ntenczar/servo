@@ -266,8 +266,12 @@ class CommandBase(object):
         self.config["build"].setdefault("debug-mozjs", False)
         self.config["build"].setdefault("ccache", "")
         self.config["build"].setdefault("rustflags", "")
-        self.config["build"].setdefault("incremental", False)
         self.config["build"].setdefault("thinlto", False)
+
+        # Incremental is enabled by default in 1.24 Nightly for dev profiles
+        # Disable it explicitly on Windows to work around
+        # https://github.com/rust-lang/rust/issues/47186
+        self.config["build"].setdefault("incremental", False if is_windows() else None)
 
         self.config.setdefault("android", {})
         self.config["android"].setdefault("sdk", "")
@@ -294,9 +298,8 @@ class CommandBase(object):
             self.config["tools"]["rust-root"] = path.join(
                 self.context.sharedir, "rust", self.rust_path())
         if use_stable_rust:
-            # Cargo maintainer's position is that CARGO_INCREMENTAL is a nightly-only feature
-            # and should not be used on the stable channel.
-            # https://github.com/rust-lang/cargo/issues/3835
+            # We use Cargo Nightly 1.24 with Rust 1.22,
+            # it passes `-C incremental` to rustc, which is new in Rust 1.24.
             self.config["build"]["incremental"] = False
 
     def use_stable_rust(self):
@@ -448,6 +451,8 @@ class CommandBase(object):
         env["CARGO_HOME"] = self.config["tools"]["cargo-home-dir"]
         if self.config["build"]["incremental"]:
             env["CARGO_INCREMENTAL"] = "1"
+        elif self.config["build"]["incremental"] is not None:
+            env["CARGO_INCREMENTAL"] = "0"
 
         if extra_lib:
             if sys.platform == "darwin":

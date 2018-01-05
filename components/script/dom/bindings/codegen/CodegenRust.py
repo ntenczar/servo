@@ -2525,7 +2525,7 @@ def CopyUnforgeablePropertiesToInstance(descriptor):
     # reflector, so we can make sure we don't get confused by named getters.
     if descriptor.proxy:
         copyCode += """\
-rooted!(in(cx) let mut expando = ptr::null_mut());
+rooted!(in(cx) let mut expando = ptr::null_mut::<JSObject>());
 ensure_expando_object(cx, obj.handle(), expando.handle_mut());
 """
         obj = "expando"
@@ -2540,7 +2540,7 @@ ensure_expando_object(cx, obj.handle(), expando.handle_mut());
     else:
         copyFunc = "JS_InitializePropertiesFromCompatibleNativeObject"
     copyCode += """\
-rooted!(in(cx) let mut unforgeable_holder = ptr::null_mut());
+rooted!(in(cx) let mut unforgeable_holder = ptr::null_mut::<JSObject>());
 unforgeable_holder.handle_mut().set(
     JS_GetReservedSlot(proto.get(), DOM_PROTO_UNFORGEABLE_HOLDER_SLOT).to_object());
 assert!(%(copyFunc)s(cx, %(obj)s.handle(), unforgeable_holder.handle()));
@@ -2572,7 +2572,7 @@ let scope = scope.reflector().get_jsobject();
 assert!(!scope.get().is_null());
 assert!(((*get_object_class(scope.get())).flags & JSCLASS_IS_GLOBAL) != 0);
 
-rooted!(in(cx) let mut proto = ptr::null_mut());
+rooted!(in(cx) let mut proto = ptr::null_mut::<JSObject>());
 let _ac = JSAutoCompartment::new(cx, scope.get());
 GetProtoObject(cx, scope, proto.handle_mut());
 assert!(!proto.is_null());
@@ -2617,7 +2617,7 @@ class CGWrapGlobalMethod(CGAbstractMethod):
 let raw = Box::into_raw(object);
 let _rt = RootedTraceable::new(&*raw);
 
-rooted!(in(cx) let mut obj = ptr::null_mut());
+rooted!(in(cx) let mut obj = ptr::null_mut::<JSObject>());
 create_global_object(
     cx,
     &Class.base,
@@ -2629,7 +2629,7 @@ assert!(!obj.is_null());
 (*raw).init_reflector(obj.get());
 
 let _ac = JSAutoCompartment::new(cx, obj.get());
-rooted!(in(cx) let mut proto = ptr::null_mut());
+rooted!(in(cx) let mut proto = ptr::null_mut::<JSObject>());
 GetProtoObject(cx, obj.handle(), proto.handle_mut());
 assert!(JS_SplicePrototype(cx, obj.handle(), proto.handle()));
 let mut immutable = false;
@@ -2757,7 +2757,7 @@ class CGCreateInterfaceObjectsMethod(CGAbstractMethod):
             return CGGeneric("""\
 rooted!(in(cx) let proto = %(proto)s);
 assert!(!proto.is_null());
-rooted!(in(cx) let mut namespace = ptr::null_mut());
+rooted!(in(cx) let mut namespace = ptr::null_mut::<JSObject>());
 create_namespace_object(cx, global, proto.handle(), &NAMESPACE_OBJECT_CLASS,
                         %(methods)s, %(name)s, namespace.handle_mut());
 assert!(!namespace.is_null());
@@ -2770,7 +2770,7 @@ assert!((*cache)[PrototypeList::Constructor::%(id)s as usize].is_null());
         if self.descriptor.interface.isCallback():
             assert not self.descriptor.interface.ctor() and self.descriptor.interface.hasConstants()
             return CGGeneric("""\
-rooted!(in(cx) let mut interface = ptr::null_mut());
+rooted!(in(cx) let mut interface = ptr::null_mut::<JSObject>());
 create_callback_interface_object(cx, global, sConstants, %(name)s, interface.handle_mut());
 assert!(!interface.is_null());
 assert!((*cache)[PrototypeList::Constructor::%(id)s as usize].is_null());
@@ -2793,7 +2793,7 @@ assert!((*cache)[PrototypeList::Constructor::%(id)s as usize].is_null());
                                  toBindingNamespace(parentName))
 
         code = [CGGeneric("""\
-rooted!(in(cx) let mut prototype_proto = ptr::null_mut());
+rooted!(in(cx) let mut prototype_proto = ptr::null_mut::<JSObject>());
 %s;
 assert!(!prototype_proto.is_null());""" % getPrototypeProto)]
 
@@ -2821,7 +2821,7 @@ assert!(!prototype_proto.is_null());""" % getPrototypeProto)]
             proto_properties = properties
 
         code.append(CGGeneric("""
-rooted!(in(cx) let mut prototype = ptr::null_mut());
+rooted!(in(cx) let mut prototype = ptr::null_mut::<JSObject>());
 create_interface_prototype_object(cx,
                                   prototype_proto.handle(),
                                   &PrototypeClass,
@@ -2848,7 +2848,7 @@ assert!((*cache)[PrototypeList::ID::%(id)s as usize].is_null());
             if parentName:
                 parentName = toBindingNamespace(parentName)
                 code.append(CGGeneric("""
-rooted!(in(cx) let mut interface_proto = ptr::null_mut());
+rooted!(in(cx) let mut interface_proto = ptr::null_mut::<JSObject>());
 %s::GetConstructorObject(cx, global, interface_proto.handle_mut());""" % parentName))
             else:
                 code.append(CGGeneric("""
@@ -2856,7 +2856,7 @@ rooted!(in(cx) let interface_proto = JS_GetFunctionPrototype(cx, global));"""))
             code.append(CGGeneric("""\
 assert!(!interface_proto.is_null());
 
-rooted!(in(cx) let mut interface = ptr::null_mut());
+rooted!(in(cx) let mut interface = ptr::null_mut::<JSObject>());
 create_noncallback_interface_object(cx,
                                     global,
                                     interface_proto.handle(),
@@ -2959,7 +2959,7 @@ assert!((*cache)[PrototypeList::Constructor::%(id)s as usize].is_null());
                 holderClass = "&Class.base as *const JSClass"
                 holderProto = "prototype.handle()"
             code.append(CGGeneric("""
-rooted!(in(cx) let mut unforgeable_holder = ptr::null_mut());
+rooted!(in(cx) let mut unforgeable_holder = ptr::null_mut::<JSObject>());
 unforgeable_holder.handle_mut().set(
     JS_NewObjectWithoutMetadata(cx, %(holderClass)s, %(holderProto)s));
 assert!(!unforgeable_holder.is_null());
@@ -3137,7 +3137,7 @@ if !ConstructorEnabled(cx, global) {
     return;
 }
 
-rooted!(in(cx) let mut proto = ptr::null_mut());
+rooted!(in(cx) let mut proto = ptr::null_mut::<JSObject>());
 %s(cx, global, proto.handle_mut());
 assert!(!proto.is_null());""" % (function,))
 
@@ -4927,7 +4927,7 @@ if %s {
 
         # FIXME(#11868) Should assign to desc.obj, desc.get() is a copy.
         return get + """\
-rooted!(in(cx) let mut expando = ptr::null_mut());
+rooted!(in(cx) let mut expando = ptr::null_mut::<JSObject>());
 get_expando_object(proxy, expando.handle_mut());
 //if (!xpc::WrapperFactory::IsXrayWrapper(proxy) && (expando = GetExpandoObject(proxy))) {
 if !expando.is_null() {
@@ -5057,7 +5057,7 @@ class CGDOMJSProxyHandler_ownPropertyKeys(CGAbstractExternMethod):
 
         body += dedent(
             """
-            rooted!(in(cx) let mut expando = ptr::null_mut());
+            rooted!(in(cx) let mut expando = ptr::null_mut::<JSObject>());
             get_expando_object(proxy, expando.handle_mut());
             if !expando.is_null() {
                 GetPropertyKeys(cx, expando.handle(), JSITER_OWNONLY | JSITER_HIDDEN | JSITER_SYMBOLS, props);
@@ -5100,7 +5100,7 @@ class CGDOMJSProxyHandler_getOwnEnumerablePropertyKeys(CGAbstractExternMethod):
 
         body += dedent(
             """
-            rooted!(in(cx) let mut expando = ptr::null_mut());
+            rooted!(in(cx) let mut expando = ptr::null_mut::<JSObject>());
             get_expando_object(proxy, expando.handle_mut());
             if !expando.is_null() {
                 GetPropertyKeys(cx, expando.handle(), JSITER_OWNONLY | JSITER_HIDDEN | JSITER_SYMBOLS, props);
@@ -5159,7 +5159,7 @@ if %s {
             named = ""
 
         return indexed + """\
-rooted!(in(cx) let mut expando = ptr::null_mut());
+rooted!(in(cx) let mut expando = ptr::null_mut::<JSObject>());
 get_expando_object(proxy, expando.handle_mut());
 if !expando.is_null() {
     let ok = JS_HasPropertyById(cx, expando.handle(), id, bp);
@@ -5186,7 +5186,7 @@ class CGDOMJSProxyHandler_get(CGAbstractExternMethod):
     # https://heycam.github.io/webidl/#LegacyPlatformObjectGetOwnProperty
     def getBody(self):
         getFromExpando = """\
-rooted!(in(cx) let mut expando = ptr::null_mut());
+rooted!(in(cx) let mut expando = ptr::null_mut::<JSObject>());
 get_expando_object(proxy, expando.handle_mut());
 if !expando.is_null() {
     let mut hasProp = false;
@@ -5392,7 +5392,7 @@ if args.callee() == new_target.get() {
 }
 
 // Step 6
-rooted!(in(cx) let mut prototype = ptr::null_mut());
+rooted!(in(cx) let mut prototype = ptr::null_mut::<JSObject>());
 {
     rooted!(in(cx) let mut proto_val = UndefinedValue());
     let _ac = JSAutoCompartment::new(cx, new_target.get());
@@ -6561,7 +6561,7 @@ class CGCallback(CGClass):
 
         bodyWithThis = string.Template(
             setupCall +
-            "rooted!(in(s.get_context()) let mut thisObjJS = ptr::null_mut());\n"
+            "rooted!(in(s.get_context()) let mut thisObjJS = ptr::null_mut::<JSObject>());\n"
             "wrap_call_this_object(s.get_context(), thisObj, thisObjJS.handle_mut());\n"
             "if thisObjJS.is_null() {\n"
             "    return Err(JSFailed);\n"
@@ -6572,7 +6572,7 @@ class CGCallback(CGClass):
             })
         bodyWithoutThis = string.Template(
             setupCall +
-            "rooted!(in(s.get_context()) let thisObjJS = ptr::null_mut());\n"
+            "rooted!(in(s.get_context()) let thisObjJS = ptr::null_mut::<JSObject>());\n"
             "return ${methodName}(${callArgs});").substitute({
                 "callArgs": ", ".join(argnamesWithoutThis),
                 "methodName": 'self.' + method.name,
